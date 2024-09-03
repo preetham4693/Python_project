@@ -1,0 +1,93 @@
+import time
+import picamera
+from PIL import Image
+import pytesseract
+from gtts import gTTS
+import pygame
+import os
+import RPi.GPIO as GPIO
+
+# Initialize pygame mixer
+pygame.mixer.init()
+
+# Use the Broadcom SOC channel numbers
+GPIO.setmode(GPIO.BCM)
+
+# Define the GPIO pin numbers
+BUTTON_PIN = 16
+
+# Set up the button pin as an input with an internal pull-down resistor
+GPIO.setup(BUTTON_PIN, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+
+def capture_image(image_path):
+    with picamera.PiCamera() as camera:
+        camera.start_preview()
+        time.sleep(2)  # Allow the camera to warm up
+        camera.capture(image_path)
+        camera.stop_preview()
+
+def extract_text_from_image(image_path):
+    try:
+        image = Image.open(image_path)
+        text = pytesseract.image_to_string(image)
+        return text.strip()
+    except Exception as e:
+        print(f"Error extracting text: {e}")
+        return ""
+
+def text_to_speech(text, audio_path):
+    try:
+        if text:
+            tts = gTTS(text=text, lang='en')
+            tts.save(audio_path)
+            pygame.mixer.music.load(audio_path)
+            pygame.mixer.music.play()
+            while pygame.mixer.music.get_busy():
+                time.sleep(1)
+        else:
+            print("No text to convert to speech.")
+    except Exception as e:
+        print(f"Error in text to speech conversion: {e}")
+
+def button_callback(channel):
+    image_path = '/home/bunny/Desktop/Speak/captured_image.jpg'
+    audio_path = '/home/bunny/Desktop/Speak/output_audio.mp3'
+
+    # Remove previous files if they exist
+    if os.path.exists(image_path):
+        os.remove(image_path)
+    if os.path.exists(audio_path):
+        os.remove(audio_path)
+
+    # Step 1: Capture image
+    print("Capturing image...")
+    capture_image(image_path)
+    print("Image captured.")
+
+    # Step 2: Extract text from image
+    print("Extracting text from image...")
+    text = extract_text_from_image(image_path)
+    print("Extracted text:")
+    print(text)
+
+    # Step 3: Convert text to speech
+    print("Converting text to speech...")
+    text_to_speech(text, audio_path)
+    print("Text to speech conversion complete.")
+
+def main():
+    print("Press the button to capture an image and process it...")
+    GPIO.add_event_detect(BUTTON_PIN, GPIO.RISING, callback=button_callback, bouncetime=200)
+    
+    try:
+        # Keep the script running
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        print("Exiting program")
+    finally:
+        # Clean up the GPIO pins before exiting
+        GPIO.cleanup()
+
+if __name__ == '__main__':
+    main()
