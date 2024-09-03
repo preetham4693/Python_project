@@ -1,0 +1,41 @@
+#define trigpin 12
+#define echopin 13
+#define buzzer 11
+void setup() {
+  // put your setup code here, to run once:
+Serial.begin(9600);
+pinMode(trigpin,OUTPUT);
+pinMode(echopin,INPUT);
+pinMode(buzzer,OUTPUT);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+long distance,duration;
+digitalWrite(trigpin,LOW);
+delayMicroseconds(2);
+
+digitalWrite(trigpin,HIGH);
+delayMicroseconds(10);
+digitalWrite(trigpin,LOW);
+duration = pulseIn(echopin,HIGH);
+//distance = (duration/2) / 29.1;
+distance = (duration*0.034)/2;
+Serial.print("DISTANCE:");
+Serial.println(distance);
+  
+if(distance>=120 || distance<=0)
+
+{
+  Serial.println("Out of range");
+}
+if(distance<120)
+  {
+    digitalWrite(buzzer,HIGH);
+  }
+  else
+  {
+    digitalWrite(buzzer,LOW);
+  }
+delay(300);
+}
